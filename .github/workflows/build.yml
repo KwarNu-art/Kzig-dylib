@@ -1,33 +1,45 @@
-name: Build Kzig Dylib  
- 
-on:  
- push:  
-   branches: [ "main" ]  
- workflow_dispatch:  
- 
-jobs:  
- build:  
-   runs-on: macos-latest  
- 
-   steps:  
-     - name: Checkout Repository  
-       uses: actions/checkout@v4  
- 
-     - name: Compile Kzig Dylib  
-       run: |  
-         SDKPATH=$(xcrun --sdk iphoneos --show-sdk-path)  
-         xcrun clang -target arm64-apple-ios12.0 \  
-           -isysroot "$SDKPATH" \  
-           -dynamiclib \  
-           -fobjc-arc \  
-           -framework Foundation \  
-           -framework UIKit \  
-           -framework QuartzCore \  
-           -o Kzig.dylib \  
-           Kzing.m  
- 
-     - name: Upload Dylib Artifact  
-       uses: actions/upload-artifact@v4  
-       with:  
-         name: Kzig-dylib  
-         path: Kzig.dylib  
+name: Build iOS Dylib
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build libkzig.dylib for iOS (arm64)
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Verify Xcode and SDK
+        run: |
+          xcodebuild -version
+          xcrun --sdk iphoneos --show-sdk-path
+
+      - name: Compile Dylib
+        run: |
+          xcrun --sdk iphoneos clang -dynamiclib \
+            -arch arm64 \
+            -target arm64-apple-ios14.0 \
+            -framework Foundation \
+            -framework UIKit \
+            -framework QuartzCore \
+            -fobjc-arc \
+            kzig.m \
+            -o libkzig.dylib
+
+      - name: Verify Architecture and File Type
+        run: |
+          file libkzig.dylib
+          lipo -info libkzig.dylib
+
+      - name: Upload Dylib Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: libkzig-dylib
+          path: libkzig.dylib
